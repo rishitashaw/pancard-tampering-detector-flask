@@ -28,3 +28,28 @@ def index():
         original_image = cv2.imread(os.path.join(app.config['EXISTING_FILE'], 'image.jpg'))
         uploaded_image = cv2.imread(os.path.join(app.config['INITIAL_FILE_UPLOADS'], 'image.jpg'))
 
+        original_gray = cv2.cvtColor(original_image, cv2.COLOR_BGR2GRAY)
+        uploaded_gray = cv2.cvtColor(uploaded_image, cv2.COLOR_BGR2GRAY)
+
+        (score, diff) = cv2.cvtColor(original_gray, uploaded_image, full=True)
+        diff = (diff * 255).astype("uint8")
+
+        thresh = cv2.threshold(diff, 0, 255, cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU)[1]
+        cnts = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        cnts = imutils.grab_contours(cnts)
+
+        for c in cnts:
+            (x, y, w, h) = cv2.boundingRect(c)
+            cv2.rectangle(original_image, (x, y), (x + w, y + h), (0, 255, 0), 2)
+            cv2.rectangle(uploaded_image, (x, y), (x + w, y + h), (0, 255, 0), 2)
+
+        cv2.imwrite(os.path.join(app.config['GENERATED_FILE'], 'image_original.jpg'), original_image)
+        cv2.imwrite(os.path.join(app.config['GENERATED_FILE'], 'image_uploaded.jpg'), uploaded_image)
+        cv2.imwrite(os.path.join(app.config['GENERATED_FILE'], 'image_diff.jpg'), diff)
+        cv2.imwrite(os.path.join(app.config['GENERATED_FILE'], 'image_thresh.jpg'), thresh)
+        
+        return render_template('index.html', pred=str(round(score*100, 2))+ ' %' + ' match')
+
+
+if __name__ == '__main__':
+    app.run(debug=True)
