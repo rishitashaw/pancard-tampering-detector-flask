@@ -1,7 +1,7 @@
 from app import app
-from flask import render_template, request, redirect, url_for, send_from_directory
+from flask import render_template, request
 import os
-from skimage import structural_similarity
+from skimage.metrics import structural_similarity
 import imutils
 import cv2
 from PIL import Image
@@ -17,12 +17,12 @@ def index():
 
     if request.method =='POST':
         file_upload = request.files['file_upload']
-        file_name = file_upload.filename
+        filename = file_upload.filename
 
         uploaded_image = Image.open(file_upload).resize((250,160))
         uploaded_image.save(os.path.join(app.config['INITIAL_FILE_UPLOADS'], 'image.jpg'))
 
-        original_image = Image.open(os.path.join(app.config['EXISTING_FILE'], 'image.jpg'))
+        original_image = Image.open(os.path.join(app.config['EXISTING_FILE'], 'image.jpg')).resize((250,160))
         original_image.save(os.path.join(app.config['EXISTING_FILE'], 'image.jpg'))
 
         original_image = cv2.imread(os.path.join(app.config['EXISTING_FILE'], 'image.jpg'))
@@ -31,7 +31,7 @@ def index():
         original_gray = cv2.cvtColor(original_image, cv2.COLOR_BGR2GRAY)
         uploaded_gray = cv2.cvtColor(uploaded_image, cv2.COLOR_BGR2GRAY)
 
-        (score, diff) = cv2.cvtColor(original_gray, uploaded_image, full=True)
+        (score, diff) = structural_similarity(original_gray, uploaded_gray, full=True)
         diff = (diff * 255).astype("uint8")
 
         thresh = cv2.threshold(diff, 0, 255, cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU)[1]
@@ -40,8 +40,8 @@ def index():
 
         for c in cnts:
             (x, y, w, h) = cv2.boundingRect(c)
-            cv2.rectangle(original_image, (x, y), (x + w, y + h), (0, 255, 0), 2)
-            cv2.rectangle(uploaded_image, (x, y), (x + w, y + h), (0, 255, 0), 2)
+            cv2.rectangle(original_image, (x, y), (x + w, y + h), (0, 0, 255), 2)
+            cv2.rectangle(uploaded_image, (x, y), (x + w, y + h), (0, 0, 255), 2)
 
         cv2.imwrite(os.path.join(app.config['GENERATED_FILE'], 'image_original.jpg'), original_image)
         cv2.imwrite(os.path.join(app.config['GENERATED_FILE'], 'image_uploaded.jpg'), uploaded_image)
